@@ -1,6 +1,10 @@
 const std = @import("std");
+const colour = @import("colour.zig");
 
 pub fn main() !void {
+    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
+    const alloc = gpa.allocator();
+
     const stdout_file = std.io.getStdOut().writer();
     var bw = std.io.bufferedWriter(stdout_file);
 
@@ -9,33 +13,28 @@ pub fn main() !void {
 
     const stdout = bw.writer();
     const imgout = img.writer();
-    const px: i32 = 64;
-    const py: i32 = 64;
     const r: i32 = 10;
 
-    const x_center = px / 2;
-    const y_center = py / 2;
+    const ppm = PPMImage{ .img_writer = imgout, .alloc = alloc, .width = 64, .height = 64 };
+    const x_center = ppm.center_x();
+    const y_center = ppm.center_y();
+    try ppm.header();
 
-    //_ = try std.fmt.formatInt(px, 32, .lower, .{}, imgout);
-    _ = try imgout.writeAll("P3\n64 64\n");
-    //_ = try std.fmt.formatInt(px, 32, .lower, .{}, imgout);
-    //_ = try imgout.writeAll("\n");
-    _ = try imgout.writeAll("255\n");
-
-    for (0..py) |_y| {
+    for (0..ppm.height) |_y| {
         const y = @as(i32, @intCast(_y));
-        for (0..px) |_x| {
+        for (0..ppm.width) |_x| {
             const x = @as(i32, @intCast(_x));
             const x_adj = x - x_center;
             const y_adj = y - y_center;
 
             const calculated_r = try std.math.powi(i32, x_adj, 2) + try std.math.powi(i32, y_adj, 2);
+
             if (calculated_r <= r) {
                 try stdout.print("x", .{});
-                _ = try imgout.writeAll("  0   0   0\n");
+                try ppm.write_pixel(try colour.Black.into_ppm());
             } else {
                 try stdout.print(".", .{});
-                _ = try imgout.writeAll("255 255 255\n");
+                try ppm.write_pixel(try colour.White.into_ppm());
             }
         }
         try stdout.print("\n", .{});
@@ -44,16 +43,26 @@ pub fn main() !void {
 }
 
 const PPMImage = struct {
-    width: i32,
-    height: i32,
+    img_writer: std.fs.File.Writer,
+    alloc: std.mem.Allocator,
+    width: usize,
+    height: usize,
 
-    fn write_header(self: *PPMImage, writer: std.io.Writer) !void {
-        _ = try writer.writeAll("P3\n");
+    fn center_x(self: PPMImage) i32 {
+        return @as(i32, @intCast(@divFloor(self.width, 2)));
+    }
 
-        var buf: [9]u8 = undefined;
-        const px_format = std.fmt.bufPrint(&buf, "{} {}\n", .{ self.width, self.height });
-        _ = try writer.writeAll(px_format);
+    fn center_y(self: PPMImage) i32 {
+        return @as(i32, @intCast(@divFloor(self.height, 2)));
+    }
 
-        _ = try writer.writeAll("255\n");
+    fn header(self: PPMImage) !void {
+        const h = try std.fmt.allocPrint(self.alloc, "P3\n{} {}\n255\n", .{ self.width, self.height });
+        defer self.alloc.free(h);
+        try self.img_writer.writeAll(h);
+    }
+
+    fn write_pixel(self: PPMImage, pixel: []u8) !void {
+        try self.img_writer.writeAll(pixel);
     }
 };
