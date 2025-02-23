@@ -6,8 +6,8 @@ const RGB = struct {
     b: u16,
     repr: [16]u8 = undefined,
 
-    pub fn into_ppm(self: *RGB) ![]u8 {
-        return try std.fmt.bufPrint(&self.repr, "{:03} {:03} {:03}\n", .{ self.r, self.g, self.b });
+    pub fn into_ppm(self: *RGB) []u8 {
+        return std.fmt.bufPrint(&self.repr, "{:03} {:03} {:03}\n", .{ self.r, self.g, self.b }) catch &"".*;
     }
 };
 

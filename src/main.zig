@@ -31,10 +31,10 @@ pub fn main() !void {
 
             if (calculated_r <= r) {
                 try stdout.print("x", .{});
-                try ppm.write_pixel(try colour.Black.into_ppm());
+                try ppm.write_pixel(colour.Black.into_ppm());
             } else {
                 try stdout.print(".", .{});
-                try ppm.write_pixel(try colour.White.into_ppm());
+                try ppm.write_pixel(colour.White.into_ppm());
             }
         }
         try stdout.print("\n", .{});
